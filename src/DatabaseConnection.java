@@ -7,7 +7,7 @@ import java.sql.SQLException;
  */
 public class DatabaseConnection {
     // Database URL and credentials
-    private static final String URL = "jdbc:mysql://localhost:3306/PoiseDMS?useSSL=false&serverTimezone=UTC";
+	private static final String URL = "jdbc:mysql://localhost:3306/PoiseDMS";
     private static final String USER = "user2"; // Replace with your MySQL username
     private static final String PASSWORD = "Gunnerforlife7*"; // Replace with your MySQL password
 

@@ -1,6 +1,13 @@
 import java.sql.*;
-import java.util.InputMismatchException;
+// import java.util.InputMismatchException;
 import java.util.Scanner;
+import java.util.regex.Pattern;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.LocalDate;
+
 
 /**
  * ProjectManager class allows interaction with the project database
@@ -14,7 +21,7 @@ import java.util.Scanner;
  * @version 1.0
  */
 public class ProjectManager {
-
+	
     /**
      * Displays all projects from the database.
      * 
@@ -91,15 +98,16 @@ public class ProjectManager {
     }
 
 
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
     /**
      * Adds a new project to the database.
      * This method performs validation for inputs like ERF number, project fee, architect ID, etc.
      * It also checks the existence of Architect, Contractor, and Customer IDs before proceeding.
-     * 
+     * If a project name is not provided, it will be generated using the surname of the customer.
+     *
      * @param connection the database connection
      * @param scanner the scanner object for user input
-     * @see <a href="https://docs.oracle.com/javase/7/docs/api/java/sql/PreparedStatement.html">PreparedStatement documentation</a>
-     * @see <a href="https://www.journaldev.com/1044/java-input-validation">Java Input Validation</a>
      */
     public void addNewProject(Connection connection, Scanner scanner) {
         try {
@@ -112,13 +120,13 @@ public class ProjectManager {
                 return;
             }
 
-            System.out.print("Enter project name (e.g., New Office Building): ");
+            System.out.print("Enter project name (press Enter to generate automatically): ");
             String projectName = scanner.nextLine().trim();
 
-            System.out.print("Enter project due date (YYYY-MM-DD, e.g., 2025-12-31): ");
-            String dueDate = scanner.nextLine().trim();
+            // Validate due date
+            LocalDate dueDate = getValidFutureDate(scanner, "Enter project due date (YYYY-MM-DD, e.g., 2025-12-31): ");
 
-            System.out.print("Enter building type (e.g., Residential, Commercial): ");
+            System.out.print("Enter building type (e.g., Residential, Commercial, House, Apartment): ");
             String buildingType = scanner.nextLine().trim();
 
             System.out.print("Enter physical address (e.g., 123 Main St, City, Country): ");
@@ -143,6 +151,17 @@ public class ProjectManager {
             String contractorID = validateAndGetEntity(connection, scanner, "Contractor", "CON");
             String customerID = validateAndGetEntity(connection, scanner, "Customer", "CUS");
 
+            if (customerID == null) {
+                System.out.println("Error: Project cannot be added without a valid customer.");
+                return;
+            }
+
+            // Generate project name if not provided
+            if (projectName.isEmpty()) {
+                projectName = generateProjectName(connection, customerID, buildingType);
+                System.out.println("Project name automatically set to: " + projectName);
+            }
+
             // Prepare the SQL query
             String query = "INSERT INTO project (ProjectNumber, ProjectName, Deadline, BuildingType, PhysicalAddress, ERFNumber, TotalFee, TotalPaid, ArchitectID, ContractorID, CustomerID, Finalised) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'No');";
 
@@ -150,7 +169,7 @@ public class ProjectManager {
             try (PreparedStatement pstmt = connection.prepareStatement(query)) {
                 pstmt.setString(1, projectNumber);
                 pstmt.setString(2, projectName);
-                pstmt.setString(3, dueDate);
+                pstmt.setString(3, dueDate.toString()); // Store as YYYY-MM-DD
                 pstmt.setString(4, buildingType);
                 pstmt.setString(5, physicalAddress);
                 pstmt.setString(6, erfNumber);
@@ -170,27 +189,77 @@ public class ProjectManager {
                 System.out.println("Error adding project to the database: " + e.getMessage());
                 e.printStackTrace();
             }
-
         } catch (Exception e) {
             System.out.println("An unexpected error occurred: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    private double getValidDoubleInput(Scanner scanner, String prompt) {
-        double value = -1;
-        while (value < 0) {
+    /**
+     * Generates a project name based on the customer's surname and building type.
+     *
+     * @param connection   the database connection
+     * @param customerID   the ID of the customer
+     * @param buildingType the type of building
+     * @return the generated project name
+     */
+    private String generateProjectName(Connection connection, String customerID, String buildingType) {
+        String surname = "Unknown";
+        try (PreparedStatement pstmt = connection.prepareStatement("SELECT Surname FROM customer WHERE CustomerID = ?")) {
+            pstmt.setString(1, customerID);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                surname = rs.getString("Surname");
+            }
+        } catch (SQLException e) {
+            System.out.println("Error fetching customer surname: " + e.getMessage());
+        }
+
+        switch (buildingType.toLowerCase()) {
+            case "house":
+                return "House " + surname;
+            case "apartment":
+                return "Apartment " + surname;
+            default:
+                return "Project " + surname;
+        }
+    }
+
+
+    // Validates the date input and ensures it is in the future
+    private LocalDate getValidFutureDate(Scanner scanner, String prompt) {
+        while (true) {
             System.out.print(prompt);
+            String input = scanner.nextLine().trim();
             try {
-                value = Double.parseDouble(scanner.nextLine().trim());
-                if (value < 0) {
-                    System.out.println("Value cannot be negative.");
+                LocalDate date = LocalDate.parse(input, DATE_FORMAT);
+                if (date.isBefore(LocalDate.now())) {
+                    System.out.println("Error: The date cannot be in the past. Please enter a future date.");
+                } else {
+                    return date;
                 }
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input. Please enter a valid number.");
+            } catch (DateTimeParseException e) {
+                System.out.println("Invalid date format! Please enter the date in YYYY-MM-DD format.");
             }
         }
-        return value;
+    }
+
+ // Validates double inputs for fee values
+    private double getValidDoubleInput(Scanner scanner, String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            try {
+                double value = Double.parseDouble(input);
+                if (value >= 0) {
+                    return value;
+                } else {
+                    System.out.println("Error: Amount cannot be negative. Please enter a valid amount.");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid amount! Please enter a valid numeric value.");
+            }
+        }
     }
 
     private boolean projectExists(Connection connection, String projectNumber) {
@@ -208,7 +277,6 @@ public class ProjectManager {
         }
         return false;
     }
-
 
     private String validateAndGetEntity(Connection connection, Scanner scanner, String entityType, String prefix) {
         String entityID = "";
@@ -232,29 +300,72 @@ public class ProjectManager {
         return entityID;
     }
 
-    private void addEntity(Connection connection, Scanner scanner, String entityType, String entityID) {
-        System.out.print("Enter " + entityType + "'s Name: ");
-        String name = scanner.nextLine();
-        System.out.print("Enter " + entityType + "'s Telephone Number: ");
-        String telephone = scanner.nextLine();
-        System.out.print("Enter " + entityType + "'s Email: ");
-        String email = scanner.nextLine();
-        System.out.print("Enter " + entityType + "'s Physical Address: ");
-        String physicalAddress = scanner.nextLine();
+    // Email and phone validation patterns
+    private static final Pattern EMAIL_PATTERN = 
+            Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
-        String query = "INSERT INTO " + entityType.toLowerCase() + " (" + entityType + "ID, Name, Telephone, Email, PhysicalAddress) VALUES (?, ?, ?, ?, ?)";
+    private static final Pattern PHONE_PATTERN = 
+            Pattern.compile("^[0-9]{10,15}$"); // Allows 10 to 15 digits
+
+    // Method to add a new entity (e.g., Contractor, Architect)
+    public void addEntity(Connection connection, Scanner scanner, String entityType, String entityID) {
+        // Get first and last names separately
+        System.out.print("Enter " + entityType + "'s First Name: ");
+        String firstName = scanner.nextLine().trim();
+        
+        System.out.print("Enter " + entityType + "'s Surname: ");
+        String surname = scanner.nextLine().trim();
+
+        // Validate telephone number
+        String telephone;
+        while (true) {
+            System.out.print("Enter " + entityType + "'s Telephone Number (10-15 digits, numbers only): ");
+            telephone = scanner.nextLine().trim();
+            if (PHONE_PATTERN.matcher(telephone).matches()) {
+                break;
+            }
+            System.out.println("Invalid telephone number! Please enter a valid number.");
+        }
+
+        // Validate email
+        String email;
+        while (true) {
+            System.out.print("Enter " + entityType + "'s Email: ");
+            email = scanner.nextLine().trim();
+            if (EMAIL_PATTERN.matcher(email).matches()) {
+                break;
+            }
+            System.out.println("Invalid email format! Please enter a valid email (e.g., user@example.com).");
+        }
+
+        // Validate physical address
+        String physicalAddress;
+        while (true) {
+            System.out.print("Enter physical address (e.g., 123 Main St, City, Country): ");
+            physicalAddress = scanner.nextLine().trim();
+            if (physicalAddress.length() > 5 && physicalAddress.contains(",")) {
+                break;
+            }
+            System.out.println("Invalid address format! Ensure it includes street, city, and country.");
+        }
+
+        // Insert into database (Fixed Name column issue)
+        String query = "INSERT INTO " + entityType.toLowerCase() + 
+                       " (" + entityType + "ID, FirstName, Surname, Telephone, Email, PhysicalAddress) VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, entityID);
-            pstmt.setString(2, name);
-            pstmt.setString(3, telephone);
-            pstmt.setString(4, email);
-            pstmt.setString(5, physicalAddress);
+            pstmt.setString(2, firstName);
+            pstmt.setString(3, surname);
+            pstmt.setString(4, telephone);
+            pstmt.setString(5, email);
+            pstmt.setString(6, physicalAddress);
             pstmt.executeUpdate();
             System.out.println(entityType + " added successfully.");
         } catch (SQLException e) {
             System.out.println("Error adding " + entityType + ": " + e.getMessage());
         }
     }
+
 
 
     /**
@@ -281,72 +392,6 @@ public class ProjectManager {
     }
 
     /**
-     * Adds a new Architect to the database.
-     * 
-     * @param connection The database connection.
-     * @param architectID The unique ID for the architect.
-     * @param scanner The Scanner object for input collection.
-     */
-    private void addArchitect(Connection connection, String architectID, Scanner scanner) {
-        System.out.print("Enter architect name: ");
-        String name = scanner.nextLine();
-
-        String query = "INSERT INTO architect (ArchitectID, Name) VALUES (?, ?)";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setString(1, architectID);
-            pstmt.setString(2, name);
-            pstmt.executeUpdate();
-            System.out.println("Architect added successfully.");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Adds a new Contractor to the database.
-     * 
-     * @param connection The database connection.
-     * @param contractorID The unique ID for the contractor.
-     * @param scanner The Scanner object for input collection.
-     */
-    private void addContractor(Connection connection, String contractorID, Scanner scanner) {
-        System.out.print("Enter contractor name: ");
-        String name = scanner.nextLine();
-
-        String query = "INSERT INTO contractor (ContractorID, Name) VALUES (?, ?)";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setString(1, contractorID);
-            pstmt.setString(2, name);
-            pstmt.executeUpdate();
-            System.out.println("Contractor added successfully.");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Adds a new Customer to the database.
-     * 
-     * @param connection The database connection.
-     * @param customerID The unique ID for the customer.
-     * @param scanner The Scanner object for input collection.
-     */
-    private void addCustomer(Connection connection, String customerID, Scanner scanner) {
-        System.out.print("Enter customer name: ");
-        String name = scanner.nextLine();
-
-        String query = "INSERT INTO customer (CustomerID, Name) VALUES (?, ?)";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setString(1, customerID);
-            pstmt.setString(2, name);
-            pstmt.executeUpdate();
-            System.out.println("Customer added successfully.");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
      * Updates a project's details such as name and due date.
      *
      * @param connection The active database connection.
@@ -355,7 +400,7 @@ public class ProjectManager {
      */
     public void updateProject(Connection connection, Scanner scanner) {
         try {
-            System.out.print("Enter project number to update: ");
+            System.out.print("Enter project number to update(update Project name or deadline date: ");
             String projectNumber = scanner.nextLine();
 
             String verifyQuery = "SELECT * FROM project WHERE ProjectNumber = ?";
@@ -367,7 +412,7 @@ public class ProjectManager {
                         String newName = scanner.nextLine();
                         if (newName.isEmpty()) newName = resultSet.getString("ProjectName");
 
-                        System.out.print("Enter new due date (YYYY-MM-DD): ");
+                        System.out.print("Enter new deadline date (YYYY-MM-DD): ");
                         String newDueDate = scanner.nextLine();
 
                         String updateQuery = "UPDATE project SET ProjectName = ?, Deadline = ? WHERE ProjectNumber = ?";
