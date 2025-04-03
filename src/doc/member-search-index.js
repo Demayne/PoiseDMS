@@ -1,0 +1,1 @@
+memberSearchIndex = [{"p":"<Unnamed>","c":"DatabaseConnection","l":"DatabaseConnection()","u":"%3Cinit%3E()"},{"p":"<Unnamed>","c":"DatabaseConnection","l":"getConnection()"}];updateSearchResults();
