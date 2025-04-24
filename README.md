@@ -1,49 +1,48 @@
-
 # PoiseDMS - Project Management System
 
 ## Description
 PoiseDMS is a simple project management system written in Java that allows users to interact with a MySQL database. It provides a command-line interface for managing projects, including viewing, searching, adding, updating, deleting, and finalizing projects.
 
 ## Features
-- View all projects
-- View incomplete projects
-- View overdue projects
-- Search projects by number or name
-- Add a new project
-- Update an existing project
-- Delete a project
-- Finalize a project
+- View all projects  
+- View incomplete projects  
+- View overdue projects  
+- Search projects by number or name  
+- Add a new project  
+- Update an existing project  
+- Delete a project  
+- Finalize a project  
 
 ## Technologies Used
-- Java
-- MySQL
-- JDBC (Java Database Connectivity)
+- Java  
+- MySQL  
+- JDBC (Java Database Connectivity)  
 
 ## Files in the Project
 
 ### 1. `Main.java`
-This file serves as the entry point for the application. It provides a menu-driven interface for interacting with the system and calls relevant methods from `ProjectManager.java`.
+The entry point of the application. It provides a menu-driven interface and interacts with the `ProjectManager` class.
 
 ### 2. `ProjectManager.java`
-Handles the core logic for project management, including CRUD (Create, Read, Update, Delete) operations on the database.
+Handles the core logic, including all CRUD operations for managing projects in the database.
 
 ### 3. `DatabaseConnection.java`
-Manages the database connection, ensuring the application connects to the MySQL database using JDBC.
+Manages and maintains the connection to the MySQL database using JDBC.
 
 ### 4. `TableFormatter.java`
-Formats and displays the retrieved project data in a structured tabular format for better readability in the terminal.
+Formats and displays project data in a clean, tabular format for terminal readability.
 
 ## Setup Instructions
 
 ### 1. Clone the Repository
 ```bash
- git clone https://github.com/yourusername/PoiseDMS.git
- cd PoiseDMS
+git clone https://github.com/yourusername/PoiseDMS.git
+cd PoiseDMS
 ```
 
 ### 2. Database Configuration
-- Ensure MySQL is installed and running.
-- Create a database named `PoiseDMS`.
+- Ensure MySQL is installed and running.  
+- Create a database named `PoiseDMS`.  
 - Update the `DatabaseConnection.java` file with your MySQL credentials:
   ```java
   private static final String USER = "your_mysql_username";
@@ -56,14 +55,14 @@ javac *.java
 java Main
 ```
 
-## How to Add the README to GitHub Repository from Command Line
+## Git Setup and README Upload Instructions
 
 ### 1. Navigate to Your Project Directory
 ```bash
 cd /path/to/your/project
 ```
 
-### 2. Initialize a Git Repository (If Not Already Initialized)
+### 2. Initialize a Git Repository (if not already done)
 ```bash
 git init
 ```
@@ -78,7 +77,7 @@ git add README.md
 git commit -m "Added README file"
 ```
 
-### 5. Connect to GitHub Repository (If Not Connected)
+### 5. Connect to GitHub Repository
 ```bash
 git remote add origin https://github.com/yourusername/PoiseDMS.git
 ```
@@ -88,7 +87,20 @@ git remote add origin https://github.com/yourusername/PoiseDMS.git
 git push -u origin master
 ```
 
-Your README file should now be visible in your GitHub repository!
+## .gitignore
+
+To keep your repository clean, add the following to a `.gitignore` file:
+
+```
+# Ignore compiled class files
+*.class
+
+# Ignore bin/ directory (common build directory)
+/bin/
+
+# Ignore out/ directory (common build directory)
+/out/
+```
 
 ## License
 This project is open-source and available under the MIT License.
