@@ -49,18 +49,29 @@ public class ProjectManager {
       e.printStackTrace();
     }
   }
-
   /**
-   * Displays overdue projects from the database.
-   * 
+   * Displays overdue projects from the database that are not yet finalised.
+   *
+   * <p>Projects are considered overdue if their deadline has passed and they
+   * have not been marked as finalised ('YES'). This method also handles cases
+   * where the 'Finalised' column is NULL or contains 'No'.</p>
+   *
    * @param connection the database connection
    * @see <a href="https://dev.mysql.com/doc/refman/8.0/en/date-and-time-functions.html">MySQL Date Functions</a>
    */
   public void viewOverdueProjects(Connection connection) {
-    String query = "SELECT * FROM project WHERE Deadline < CURDATE()";
-    try (Statement stmt = connection.createStatement(); ResultSet resultSet = stmt.executeQuery(query)) {
+    // SQL query to fetch projects that are overdue and not finalised
+    String query = "SELECT * FROM project " +
+                   "WHERE Deadline < CURDATE() AND (Finalised IS NULL OR Finalised = 'No')";
+
+    try (Statement stmt = connection.createStatement();
+         ResultSet resultSet = stmt.executeQuery(query)) {
+         
+      // Display the result using your custom table formatter
       TableFormatter.displayOverdueProjects(resultSet);
+      
     } catch (SQLException e) {
+      System.err.println("❌ Error retrieving overdue projects: " + e.getMessage());
       e.printStackTrace();
     }
   }
@@ -84,13 +95,13 @@ public class ProjectManager {
 
       try (ResultSet resultSet = pstmt.executeQuery()) {
         if (!resultSet.isBeforeFirst()) { // Check if the result set is empty
-          System.out.println("NO data for project name or number entered.");
+          System.out.println("❌ NO data for project name or number entered.");
           return;
         }
         TableFormatter.displayProjectsByNumberOrName(resultSet);
       }
     } catch (SQLException e) {
-      System.err.println("Error searching for projects: " + e.getMessage());
+      System.err.println("❌ Error searching for projects: " + e.getMessage());
       e.printStackTrace();
     }
   }
@@ -117,13 +128,13 @@ public class ProjectManager {
           projectNumber = input;
           break;
         } else {
-          System.out.println("Invalid input. Please enter a numeric project number.");
+          System.out.println("❌ Invalid input. Please enter a numeric project number.");
         }
       }
 
       // Check if project already exists
       if (projectExists(connection, projectNumber)) {
-        System.out.println("Project with this number already exists.");
+        System.out.println("❌ Project with this number already exists.");
         return;
       }
 
@@ -147,7 +158,7 @@ public class ProjectManager {
         System.out.print("Enter ERF number (e.g., ERF5678): ");
         erfNumber = scanner.nextLine().trim();
         if (!erfNumber.startsWith("ERF")) {
-          System.out.println("Invalid ERF number. It must start with 'ERF'.");
+          System.out.println("❌ Invalid ERF number. It must start with 'ERF'.");
         }
       }
 
@@ -208,16 +219,16 @@ public class ProjectManager {
 
         int rowsAffected = pstmt.executeUpdate();
         if (rowsAffected > 0) {
-          System.out.println("Project added successfully.");
+          System.out.println("✅ Project added successfully.");
         } else {
           System.out.println("Failed to add the project.");
         }
       } catch (SQLException e) {
-        System.out.println("Error adding project to the database: " + e.getMessage());
+        System.out.println("❌ Error adding project to the database: " + e.getMessage());
         e.printStackTrace();
       }
     } catch (Exception e) {
-      System.out.println("An unexpected error occurred: " + e.getMessage());
+      System.out.println("❌ An unexpected error occurred: " + e.getMessage());
       e.printStackTrace();
     }
   }
@@ -231,7 +242,7 @@ public class ProjectManager {
    */
   private boolean validateEntityPresence(String id, String role) {
     if (id == null) {
-      System.out.println("Error: Project cannot be added without a valid " + role.toLowerCase() + ".");
+      System.out.println("❌ Error: Project cannot be added without a valid " + role.toLowerCase() + ".");
       return false;
     }
     return true;
@@ -287,7 +298,7 @@ public class ProjectManager {
           return date;
         }
       } catch (DateTimeParseException e) {
-        System.out.println("Invalid date format! Please enter the date in YYYY-MM-DD format.");
+        System.out.println("❌ Invalid date format! Please enter the date in YYYY-MM-DD format.");
       }
     }
   }
@@ -308,10 +319,10 @@ public class ProjectManager {
         if (value >= 0) {
           return value;
         } else {
-          System.out.println("Error: Amount cannot be negative. Please enter a valid amount.");
+          System.out.println("❌ Error: Amount cannot be negative. Please enter a valid amount.");
         }
       } catch (NumberFormatException e) {
-        System.out.println("Invalid amount! Please enter a valid numeric value.");
+        System.out.println("❌ Invalid amount! Please enter a valid numeric value.");
       }
     }
   }
@@ -332,7 +343,7 @@ public class ProjectManager {
         }
       }
     } catch (SQLException e) {
-      System.out.println("Error checking project existence: " + e.getMessage());
+      System.out.println("❌ Error checking project existence: " + e.getMessage());
       e.printStackTrace();
     }
     return false;
@@ -365,7 +376,7 @@ public class ProjectManager {
           System.out.println(" - " + rs.getString(1) + ": " + rs.getString(2) + " " + rs.getString(3));
         }
       } catch (SQLException e) {
-        System.out.println("Error retrieving existing " + entityType + "s: " + e.getMessage());
+        System.out.println("❌ Error retrieving existing " + entityType + "s: " + e.getMessage());
       }
 
       // Prompt for ID
@@ -396,7 +407,7 @@ public class ProjectManager {
         addEntity(connection, scanner, entityType, entityID);
         return entityID;
       } else {
-        System.out.println("Invalid input. Please enter 'y' or 'n'.");
+        System.out.println("❌ Invalid input. Please enter 'y' or 'n'.");
       }
     }
   }
@@ -433,7 +444,7 @@ public class ProjectManager {
       if (PHONE_PATTERN.matcher(telephone).matches()) {
         break;
       }
-      System.out.println("Invalid telephone number! Please enter a valid number.");
+      System.out.println("❌ Invalid telephone number! Please enter a valid number.");
     }
 
     // Validate email
@@ -444,7 +455,7 @@ public class ProjectManager {
       if (EMAIL_PATTERN.matcher(email).matches()) {
         break;
       }
-      System.out.println("Invalid email format! Please enter a valid email (e.g., user@example.com).");
+      System.out.println("❌ Invalid email format! Please enter a valid email (e.g., user@example.com).");
     }
 
     // Validate physical address
@@ -469,9 +480,9 @@ public class ProjectManager {
       pstmt.setString(5, email);
       pstmt.setString(6, physicalAddress);
       pstmt.executeUpdate();
-      System.out.println(entityType + " added successfully.");
+      System.out.println(entityType + " added successfully. ✅");
     } catch (SQLException e) {
-      System.out.println("Error adding " + entityType + ": " + e.getMessage());
+      System.out.println("❌ Error adding " + entityType + ": " + e.getMessage());
     }
   }
 
@@ -493,13 +504,13 @@ public class ProjectManager {
         return resultSet.next();
       }
     } catch (SQLException e) {
-      System.err.println("Error validating foreign key: " + e.getMessage());
+      System.err.println("❌ Error validating foreign key: " + e.getMessage());
       return false;
     }
   }
 
   /**
-   * Updates a project's details such as name and due date.
+   * Updates a project's details such as name, due date, and total paid.
    *
    * @param connection The active database connection.
    * @param scanner    Scanner object for user input.
@@ -507,40 +518,80 @@ public class ProjectManager {
    */
   public void updateProject(Connection connection, Scanner scanner) {
     try {
-      System.out.print("Enter project number to update (update Project name or deadline date): ");
-      String projectNumber = scanner.nextLine();
+      while (true) {
+        System.out.print("Enter project number to update (or type 'menu' to return): ");
+        String projectNumber = scanner.nextLine().trim();
 
-      String verifyQuery = "SELECT * FROM project WHERE ProjectNumber = ?";
-      try (PreparedStatement pstmt = connection.prepareStatement(verifyQuery)) {
-        pstmt.setString(1, projectNumber);
-        try (ResultSet resultSet = pstmt.executeQuery()) {
-          if (resultSet.next()) {
-            System.out.print("Enter new project name (Leave blank to keep current): ");
-            String newName = scanner.nextLine();
-            if (newName.isEmpty()) {
-              newName = resultSet.getString("ProjectName");
+        if (projectNumber.equalsIgnoreCase("menu")) {
+          System.out.println("Returning to main menu...");
+          return;
+        }
+
+        String verifyQuery = "SELECT * FROM project WHERE ProjectNumber = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(verifyQuery)) {
+          pstmt.setString(1, projectNumber);
+          try (ResultSet resultSet = pstmt.executeQuery()) {
+            if (resultSet.next()) {
+              String currentName = resultSet.getString("ProjectName");
+              String currentDeadline = resultSet.getString("Deadline");
+              double currentPaid = resultSet.getDouble("TotalPaid");
+
+              // Allow user to leave project name unchanged by pressing Enter
+              System.out.print("Enter new project name (press Enter to keep '" + currentName + "'): ");
+              String newName = scanner.nextLine().trim();
+              if (newName.isEmpty()) {
+                newName = currentName;
+              }
+
+              // Allow user to leave deadline unchanged by pressing Enter
+              String newDueDate;
+              do {
+                System.out.print("Enter new deadline date (YYYY-MM-DD) (current: " + currentDeadline + "): ");
+                newDueDate = scanner.nextLine().trim();
+                if (newDueDate.isEmpty()) {
+                  newDueDate = currentDeadline;
+                }
+              } while (newDueDate.isEmpty());
+
+              // Allow user to update the total paid or keep it unchanged
+              double newPaid = currentPaid;
+              while (true) {
+                System.out.print("Enter new total paid (current: R" + currentPaid + "): ");
+                String paidInput = scanner.nextLine().trim();
+                if (paidInput.isEmpty()) {
+                  break; // Keep existing value if nothing is entered
+                }
+                try {
+                  newPaid = Double.parseDouble(paidInput);
+                  break;
+                } catch (NumberFormatException e) {
+                  System.out.println("Invalid amount. Please enter a numeric value.");
+                }
+              }
+
+              String updateQuery = "UPDATE project SET ProjectName = ?, Deadline = ?, TotalPaid = ? WHERE ProjectNumber = ?";
+              try (PreparedStatement updateStmt = connection.prepareStatement(updateQuery)) {
+                updateStmt.setString(1, newName);
+                updateStmt.setString(2, newDueDate);
+                updateStmt.setDouble(3, newPaid);
+                updateStmt.setString(4, projectNumber);
+                updateStmt.executeUpdate();
+                System.out.println("✅ Project updated successfully.");
+              }
+              break;
+            } else {
+              System.out.println("❌ Project not found. Please enter a valid project number or type 'menu' to return.");
             }
-
-            System.out.print("Enter new deadline date (YYYY-MM-DD): ");
-            String newDueDate = scanner.nextLine();
-
-            String updateQuery = "UPDATE project SET ProjectName = ?, Deadline = ? WHERE ProjectNumber = ?";
-            try (PreparedStatement updateStmt = connection.prepareStatement(updateQuery)) {
-              updateStmt.setString(1, newName);
-              updateStmt.setString(2, newDueDate);
-              updateStmt.setString(3, projectNumber);
-              updateStmt.executeUpdate();
-              System.out.println("Project updated successfully.");
-            }
-          } else {
-            System.out.println("Project not found.");
           }
         }
       }
     } catch (SQLException e) {
-      System.err.println("Error updating project: " + e.getMessage());
+      System.err.println("❌ Error updating project: " + e.getMessage());
+      e.printStackTrace();
     }
   }
+
+  
   /**
    * Finalizes a project by marking it as 'Finalised' in the database and setting the completion date.
    * If the project is already finalized, the user is prompted to update the completion date.
@@ -584,15 +635,15 @@ public class ProjectManager {
             try (PreparedStatement updateStmt = connection.prepareStatement(updateQuery)) {
               updateStmt.setString(1, projectNumber);
               updateStmt.executeUpdate();
-              System.out.println("Project finalized successfully with updated completion date.");
+              System.out.println("✅ Project finalized successfully with updated completion date.");
             }
           } else {
-            System.out.println("Project not found.");
+            System.out.println("❌ Project not found.");
           }
         }
       }
     } catch (SQLException e) {
-      System.out.println("Error finalizing project: " + e.getMessage());
+      System.out.println("❌ Error finalizing project: " + e.getMessage());
       e.printStackTrace();
     }
   }
@@ -618,15 +669,15 @@ public class ProjectManager {
             try (PreparedStatement deleteStmt = connection.prepareStatement(deleteQuery)) {
               deleteStmt.setString(1, projectNumber);
               deleteStmt.executeUpdate();
-              System.out.println("Project deleted successfully.");
+              System.out.println("✅ Project deleted successfully.");
             }
           } else {
-            System.out.println("Project not found.");
+            System.out.println("❌ Project not found.");
           }
         }
       }
     } catch (SQLException e) {
-      System.err.println("Error deleting project: " + e.getMessage());
+      System.err.println("❌ Error deleting project: " + e.getMessage());
     }
   }
 }

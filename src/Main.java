@@ -103,7 +103,7 @@ public class Main {
             return;
 
           default:
-            System.out.println("Invalid choice. Please try again.");
+            System.out.println("❌ Invalid choice. Please try again.");
         }
       }
     } catch (SQLException e) {
