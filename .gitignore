@@ -1,0 +1,8 @@
+# Ignore compiled class files
+*.class
+
+# Ignore bin/ directory (common build directory)
+/bin/
+
+# Ignore out/ directory (common build directory)
+/out/
